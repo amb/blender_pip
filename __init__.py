@@ -55,7 +55,7 @@ def run_pip_command(*cmds):
         return None, e.stderr
 
     print(output.stdout)
-    return output.stdout, None
+    return output.stdout if output.stdout else "", None
 
 
 # try:
@@ -67,6 +67,7 @@ def run_pip_command(*cmds):
 def save_text(text, cols=False):
     global TEXT_OUTPUT
     TEXT_OUTPUT = []
+    # print(type(text))
     for i in text.split("\n"):
         if len(i) <= 1:
             continue
@@ -90,7 +91,7 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
         text, error = run_pip_command(
             "install", *names, "--user" if bpy.context.scene.pip_user_flag else None
         )
-        save_text(text if text else error)
+        save_text(text if text is not None else error)
         return {"FINISHED"}
 
 
@@ -102,7 +103,7 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
         text, error = run_pip_command("uninstall", *names, "-y")
-        save_text(text if text else error)
+        save_text(text if text is not None else error)
         return {"FINISHED"}
 
 
@@ -124,7 +125,7 @@ class PMM_OT_PIPList(bpy.types.Operator):
 
     def execute(self, context):
         text, error = run_pip_command("list")
-        if text:
+        if text is not None:
             save_text(text, cols=True)
         else:
             save_text(error)
