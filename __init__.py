@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Python Module Manager",
     "author": "ambi",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (2, 80, 0),
     "location": "Here",
     "description": "Manage Python modules inside Blender with PIP",
@@ -40,14 +40,31 @@ def run_pip_command(*cmds):
     cmds = [c for c in cmds if c is not None]
     print("Running PIP command", cmds, "with", python_bin)
     command = [python_bin, "-m", "pip", *cmds]
-    output = subprocess.run(
-        command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
-    )
+    try:
+        output = subprocess.run(
+            command,
+            check=True,
+            shell=True,
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as e:
+        print(">>> ERROR")
+        print("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.stderr))
+        return None, e.stderr
+
     print(output.stdout)
-    return output.stdout
+    return output.stdout, None
 
 
-def save_text(text, cols=True):
+# try:
+#     subprocess.check_output("dir /f",shell=True,stderr=subprocess.STDOUT)
+# except subprocess.CalledProcessError as e:
+#     raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+
+
+def save_text(text, cols=False):
     global TEXT_OUTPUT
     TEXT_OUTPUT = []
     for i in text.split("\n"):
@@ -70,10 +87,10 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        text = run_pip_command(
+        text, error = run_pip_command(
             "install", *names, "--user" if bpy.context.scene.pip_user_flag else None
         )
-        save_text(text, cols=False)
+        save_text(text if text else error)
         return {"FINISHED"}
 
 
@@ -84,8 +101,8 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        text = run_pip_command("uninstall", *names, "-y")
-        save_text(text, cols=False)
+        text, error = run_pip_command("uninstall", *names, "-y")
+        save_text(text if text else error)
         return {"FINISHED"}
 
 
@@ -106,8 +123,11 @@ class PMM_OT_PIPList(bpy.types.Operator):
     bl_description = "List installed PIP packages"
 
     def execute(self, context):
-        text = run_pip_command("list")
-        save_text(text)
+        text, error = run_pip_command("list")
+        if text:
+            save_text(text, cols=True)
+        else:
+            save_text(error)
         return {"FINISHED"}
 
 
@@ -157,7 +177,6 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
                     col.label(text=s)
             row = layout.row()
             row.operator(PMM_OT_ClearText.bl_idname, text="Clear output text")
-
 
 
 classes = (
