@@ -3,11 +3,12 @@ bl_info = {
     "author": "ambi",
     "version": (1, 0, 0),
     "blender": (2, 80, 0),
-    "location": "",
-    "description": "",
+    "location": "Here",
+    "description": "Manage Python modules inside Blender with PIP",
     "warning": "",
     "wiki_url": "",
     "support": "COMMUNITY",
+    "tracker_url": "https://github.com/amb/blender_pip/issues",
     "category": "Development",
 }
 
@@ -33,19 +34,47 @@ import mathutils as mu
 python_bin = bpy.app.binary_path_python
 
 
+def run_pip_command(*cmds):
+    cmds = [c for c in cmds if c is not None]
+    print("Running PIP command", cmds, "with", python_bin)
+    command = [python_bin, "-m", "pip", *cmds]
+    # if bpy.context.scene.pip_user_flag:
+    #     command.append("--user")
+
+    subprocess.run(command, check=True, shell=True)
+
+
+class PMM_OT_PIPInstall(bpy.types.Operator):
+    bl_idname = "pmm.pip_install"
+    bl_label = "Install packages"
+    bl_description = "Install PIP packages"
+
+    def execute(self, context):
+        run_pip_command(
+            "install",
+            bpy.context.scene.pip_module_name,
+            "--user" if bpy.context.scene.pip_user_flag else None,
+        )
+        return {"FINISHED"}
+
+
+class PMM_OT_PIPRemove(bpy.types.Operator):
+    bl_idname = "pmm.pip_remove"
+    bl_label = "Remove packages"
+    bl_description = "Remove PIP packages"
+
+    def execute(self, context):
+        run_pip_command("uninstall", bpy.context.scene.pip_module_name, "-y")
+        return {"FINISHED"}
+
+
 class PMM_OT_PIPList(bpy.types.Operator):
     bl_idname = "pmm.pip_list"
     bl_label = "List packages"
     bl_description = "List installed PIP packages"
 
     def execute(self, context):
-        print("[PIP list] Using", python_bin)
-        command = [python_bin, "-m", "pip", "list"]
-        if bpy.context.scene.pip_user_flag:
-            command.append("--user")
-
-        subprocess.run(command, check=True, shell=True)
-
+        run_pip_command("list")
         return {"FINISHED"}
 
 
@@ -55,36 +84,6 @@ class PMM_OT_EnsurePIP(bpy.types.Operator):
     bl_description = "Try to ensure PIP exists"
 
     def execute(self, context):
-
-        import subprocess
-        import os
-        import platform
-        import sys
-
-        # if platform.system() == "Windows":
-        #     print("Platform: Windows")
-        # elif platform.system() == "Darwin":
-        #     print("Platform: Mac")
-        # elif platform.system() == "Linux":
-        #     print("Platform: Linux")
-        # else:
-        #     print("!!! Unknown system !!!")
-
-        # print(">>> Site packages:")
-        # for path in sys.path:
-        #     if os.path.basename(path) in ("dist-packages", "site-packages"):
-        #         print(path)
-
-        # import site
-        # print(site.getsitepackages())
-        # from distutils.sysconfig import get_python_lib
-        # print(get_python_lib())
-
-        # import ensurepip
-        # ensurepip.bootstrap()
-        # print(ensurepip._PIP_VERSION)
-        # os.environ.pop("PIP_REQ_TRACKER", None)
-
         print("[Ensure PIP] Using", python_bin)
         command = [python_bin, "-m", "ensurepip"]
         if bpy.context.scene.pip_user_flag:
@@ -105,8 +104,19 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
         row.operator(PMM_OT_EnsurePIP.bl_idname, text="Ensure PIP")
         row.operator(PMM_OT_PIPList.bl_idname, text="List")
 
+        row = layout.row()
+        row.prop(bpy.context.scene, "pip_module_name", text="Module name(s)")
+        row.operator(PMM_OT_PIPInstall.bl_idname, text="Install")
+        row.operator(PMM_OT_PIPRemove.bl_idname, text="Remove")
 
-classes = (PMM_AddonPreferences, PMM_OT_EnsurePIP, PMM_OT_PIPList)
+
+classes = (
+    PMM_AddonPreferences,
+    PMM_OT_EnsurePIP,
+    PMM_OT_PIPList,
+    PMM_OT_PIPInstall,
+    PMM_OT_PIPRemove,
+)
 
 
 def register():
@@ -114,6 +124,7 @@ def register():
         bpy.utils.register_class(c)
 
     bpy.types.Scene.pip_user_flag = bpy.props.BoolProperty(default=True)
+    bpy.types.Scene.pip_module_name = bpy.props.StringProperty()
 
 
 def unregister():
@@ -121,3 +132,4 @@ def unregister():
         bpy.utils.unregister_class(c)
 
     del bpy.types.Scene.pip_user_flag
+    del bpy.types.Scene.pip_module_name
