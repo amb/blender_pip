@@ -62,11 +62,12 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        try:
-            run_pip_command("uninstall", *names, "-y")
-        except PermissionError() as e:
-            self.report({"ERROR"}, "Couldn't remove module because write permissions.")
-            print(e)
+        run_pip_command("uninstall", *names, "-y")
+        # try:
+        #     run_pip_command("uninstall", *names, "-y")
+        # except PermissionError() as e:
+        #     self.report({"ERROR"}, "Couldn't remove module because write permissions.")
+        #     print(e)
         return {"FINISHED"}
 
 
