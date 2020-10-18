@@ -70,7 +70,9 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        text = run_pip_command("install", *names, "--user" if bpy.context.scene.pip_user_flag else None)
+        text = run_pip_command(
+            "install", *names, "--user" if bpy.context.scene.pip_user_flag else None
+        )
         save_text(text, cols=False)
         return {"FINISHED"}
 
@@ -84,6 +86,17 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
         names = bpy.context.scene.pip_module_name.split(" ")
         text = run_pip_command("uninstall", *names, "-y")
         save_text(text, cols=False)
+        return {"FINISHED"}
+
+
+class PMM_OT_ClearText(bpy.types.Operator):
+    bl_idname = "pmm.pip_cleartext"
+    bl_label = "Clear text"
+    bl_description = "Clear text output"
+
+    def execute(self, context):
+        global TEXT_OUTPUT
+        TEXT_OUTPUT = []
         return {"FINISHED"}
 
 
@@ -142,6 +155,9 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
                 for s in i:
                     col = row.column()
                     col.label(text=s)
+            row = layout.row()
+            row.operator(PMM_OT_ClearText.bl_idname, text="Clear output text")
+
 
 
 classes = (
@@ -150,6 +166,7 @@ classes = (
     PMM_OT_PIPList,
     PMM_OT_PIPInstall,
     PMM_OT_PIPRemove,
+    PMM_OT_ClearText,
 )
 
 
