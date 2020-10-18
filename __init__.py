@@ -33,15 +33,34 @@ import mathutils as mu
 
 python_bin = bpy.app.binary_path_python
 
+TEXT_OUTPUT = []
+
 
 def run_pip_command(*cmds):
     cmds = [c for c in cmds if c is not None]
     print("Running PIP command", cmds, "with", python_bin)
     command = [python_bin, "-m", "pip", *cmds]
-    # if bpy.context.scene.pip_user_flag:
-    #     command.append("--user")
+    output = subprocess.run(
+        command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
+    )
+    print(output.stdout)
+    return output.stdout
 
-    subprocess.run(command, check=True, shell=True)
+
+def save_text(text, cols=True):
+    global TEXT_OUTPUT
+    TEXT_OUTPUT = []
+    for i in text.split("\n"):
+        if len(i) <= 1:
+            continue
+        subs = i.split()
+        parts = []
+        if cols:
+            for s in subs:
+                parts.append(s)
+        else:
+            parts.append(" ".join(subs))
+        TEXT_OUTPUT.append(parts)
 
 
 class PMM_OT_PIPInstall(bpy.types.Operator):
@@ -51,7 +70,8 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        run_pip_command("install", *names, "--user" if bpy.context.scene.pip_user_flag else None)
+        text = run_pip_command("install", *names, "--user" if bpy.context.scene.pip_user_flag else None)
+        save_text(text, cols=False)
         return {"FINISHED"}
 
 
@@ -62,12 +82,8 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
 
     def execute(self, context):
         names = bpy.context.scene.pip_module_name.split(" ")
-        run_pip_command("uninstall", *names, "-y")
-        # try:
-        #     run_pip_command("uninstall", *names, "-y")
-        # except PermissionError() as e:
-        #     self.report({"ERROR"}, "Couldn't remove module because write permissions.")
-        #     print(e)
+        text = run_pip_command("uninstall", *names, "-y")
+        save_text(text, cols=False)
         return {"FINISHED"}
 
 
@@ -77,7 +93,8 @@ class PMM_OT_PIPList(bpy.types.Operator):
     bl_description = "List installed PIP packages"
 
     def execute(self, context):
-        run_pip_command("list")
+        text = run_pip_command("list")
+        save_text(text)
         return {"FINISHED"}
 
 
@@ -92,7 +109,12 @@ class PMM_OT_EnsurePIP(bpy.types.Operator):
         if bpy.context.scene.pip_user_flag:
             command.append("--user")
 
-        subprocess.run(command, check=True, shell=True)
+        out = subprocess.run(
+            command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
+        )
+        global TEXT_OUTPUT
+        TEXT_OUTPUT = [i for i in out.stdout.split("\n")]
+        TEXT_OUTPUT.append(["finished."])
 
         return {"FINISHED"}
 
@@ -111,6 +133,15 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
         row.prop(bpy.context.scene, "pip_module_name", text="Module name(s)")
         row.operator(PMM_OT_PIPInstall.bl_idname, text="Install")
         row.operator(PMM_OT_PIPRemove.bl_idname, text="Remove")
+
+        if TEXT_OUTPUT != []:
+            row = layout.row(align=True)
+            box = row.box()
+            for i in TEXT_OUTPUT:
+                row = box.row()
+                for s in i:
+                    col = row.column()
+                    col.label(text=s)
 
 
 classes = (
