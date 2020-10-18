@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Python Module Manager",
     "author": "ambi",
-    "version": (1, 0, 1),
+    "version": (1, 0, 2),
     "blender": (2, 80, 0),
     "location": "Here",
     "description": "Manage Python modules inside Blender with PIP",
@@ -138,9 +138,10 @@ class PMM_OT_EnsurePIP(bpy.types.Operator):
 
     def execute(self, context):
         print("[Ensure PIP] Using", python_bin)
-        command = [python_bin, "-m", "ensurepip"]
+        command = [python_bin, "-m", "ensurepip", "--default-pip"]
         if bpy.context.scene.pip_user_flag:
             command.append("--user")
+        print("Command:", " ".join(command))
 
         out = subprocess.run(
             command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
