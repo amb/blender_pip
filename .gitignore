@@ -1,0 +1,24 @@
+# Ignore IDE files
+.idea
+.vscode
+.vs
+/vs
+*.pyproj
+
+# Ignore OS artifacts
+.DS_Store
+
+# Ignore pyenv artifacts
+.python-version
+
+# No compiled Python artifacts
+*.pyc
+
+# Ignore build artifacts
+/dist
+
+# Basic
+*.zip
+*.7z
+__pycache__
+bpy_amb
