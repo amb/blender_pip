@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Python Module Manager",
     "author": "ambi",
-    "version": (1, 0, 2),
+    "version": (1, 0, 3),
     "blender": (2, 80, 0),
     "location": "Here",
     "description": "Manage Python modules inside Blender with PIP",
@@ -36,7 +36,11 @@ python_bin = bpy.app.binary_path_python
 TEXT_OUTPUT = []
 
 
-def run_pip_command(*cmds):
+def run_pip_command(*cmds, cols=False):
+    """
+    Run PIP process with user spec commands, return stdout or stderr
+    (stdout, None) or (None, stderr)
+    """
     cmds = [c for c in cmds if c is not None]
     print("Running PIP command", cmds, "with", python_bin)
     command = [python_bin, "-m", "pip", *cmds]
@@ -58,13 +62,12 @@ def run_pip_command(*cmds):
     return output.stdout if output.stdout else "", None
 
 
-# try:
-#     subprocess.check_output("dir /f",shell=True,stderr=subprocess.STDOUT)
-# except subprocess.CalledProcessError as e:
-#     raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+# TODO: error messages
+# self.report({'ERROR'}, 'Error message')
 
 
 def save_text(text, cols=False):
+    """ Parse input text string into global 2D list """
     global TEXT_OUTPUT
     TEXT_OUTPUT = []
     # print(type(text))
@@ -143,6 +146,9 @@ class PMM_OT_EnsurePIP(bpy.types.Operator):
         if bpy.context.scene.pip_user_flag:
             command.append("--user")
         print("Command:", " ".join(command))
+
+        # on Linux:
+        # -m ensurepip --user
 
         out = subprocess.run(
             command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
