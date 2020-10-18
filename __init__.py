@@ -50,11 +50,8 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
     bl_description = "Install PIP packages"
 
     def execute(self, context):
-        run_pip_command(
-            "install",
-            bpy.context.scene.pip_module_name,
-            "--user" if bpy.context.scene.pip_user_flag else None,
-        )
+        names = bpy.context.scene.pip_module_name.split(" ")
+        run_pip_command("install", *names, "--user" if bpy.context.scene.pip_user_flag else None)
         return {"FINISHED"}
 
 
@@ -64,7 +61,12 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
     bl_description = "Remove PIP packages"
 
     def execute(self, context):
-        run_pip_command("uninstall", bpy.context.scene.pip_module_name, "-y")
+        names = bpy.context.scene.pip_module_name.split(" ")
+        try:
+            run_pip_command("uninstall", *names, "-y")
+        except PermissionError() as e:
+            self.report({"ERROR"}, "Couldn't remove module because write permissions.")
+            print(e)
         return {"FINISHED"}
 
 
