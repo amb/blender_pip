@@ -34,43 +34,48 @@ import mathutils as mu
 python_bin = bpy.app.binary_path_python
 
 TEXT_OUTPUT = []
+ERROR_OUTPUT = []
 
 
-def run_pip_command(*cmds, cols=False):
+def run_pip_command(self, *cmds, cols=False, run_module="pip"):
     """
     Run PIP process with user spec commands, return stdout or stderr
     (stdout, None) or (None, stderr)
     """
+    global ERROR_OUTPUT
+    global TEXT_OUTPUT
+
     cmds = [c for c in cmds if c is not None]
-    print("Running PIP command", cmds, "with", python_bin)
-    command = [python_bin, "-m", "pip", *cmds]
-    try:
-        output = subprocess.run(
-            command,
-            check=True,
-            shell=True,
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except subprocess.CalledProcessError as e:
+    command = [python_bin, "-m", run_module, *cmds]
+
+    print(command)
+    output = subprocess.run(
+        command,
+        universal_newlines=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    if output.stderr:
+        if "WARNING" not in output.stderr[:20]:
+            # Skip the parts where PIP complains it's not the latest and greatest
+            self.report({"ERROR"}, "Error happened. Check console")
         print(">>> ERROR")
-        print("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.stderr))
-        return None, e.stderr
+        print(output.returncode)
+        print(output.stderr)
+        ERROR_OUTPUT = save_text(output.stderr)
+    else:
+        ERROR_OUTPUT = []
 
-    print(output.stdout)
-    return output.stdout if output.stdout else "", None
-
-
-# TODO: error messages
-# self.report({'ERROR'}, 'Error message')
+    if output.stdout:
+        TEXT_OUTPUT = save_text(output.stdout, cols=cols)
+    else:
+        TEXT_OUTPUT = []
 
 
 def save_text(text, cols=False):
-    """ Parse input text string into global 2D list """
-    global TEXT_OUTPUT
-    TEXT_OUTPUT = []
-    # print(type(text))
+    """ Parse input text string into a 2D list """
+    out = []
     for i in text.split("\n"):
         if len(i) <= 1:
             continue
@@ -81,7 +86,8 @@ def save_text(text, cols=False):
                 parts.append(s)
         else:
             parts.append(" ".join(subs))
-        TEXT_OUTPUT.append(parts)
+        out.append(parts)
+    return out
 
 
 class PMM_OT_PIPInstall(bpy.types.Operator):
@@ -90,11 +96,12 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
     bl_description = "Install PIP packages"
 
     def execute(self, context):
-        names = bpy.context.scene.pip_module_name.split(" ")
-        text, error = run_pip_command(
-            "install", *names, "--user" if bpy.context.scene.pip_user_flag else None
+        run_pip_command(
+            self,
+            "install",
+            *bpy.context.scene.pip_module_name.split(" "),
+            "--user" if bpy.context.scene.pip_user_flag else None,
         )
-        save_text(text if text is not None else error)
         return {"FINISHED"}
 
 
@@ -104,9 +111,7 @@ class PMM_OT_PIPRemove(bpy.types.Operator):
     bl_description = "Remove PIP packages"
 
     def execute(self, context):
-        names = bpy.context.scene.pip_module_name.split(" ")
-        text, error = run_pip_command("uninstall", *names, "-y")
-        save_text(text if text is not None else error)
+        run_pip_command(self, "uninstall", *bpy.context.scene.pip_module_name.split(" "), "-y")
         return {"FINISHED"}
 
 
@@ -118,6 +123,8 @@ class PMM_OT_ClearText(bpy.types.Operator):
     def execute(self, context):
         global TEXT_OUTPUT
         TEXT_OUTPUT = []
+        global ERROR_OUTPUT
+        ERROR_OUTPUT = []
         return {"FINISHED"}
 
 
@@ -127,11 +134,7 @@ class PMM_OT_PIPList(bpy.types.Operator):
     bl_description = "List installed PIP packages"
 
     def execute(self, context):
-        text, error = run_pip_command("list")
-        if text is not None:
-            save_text(text, cols=True)
-        else:
-            save_text(error)
+        run_pip_command(self, "list", cols=True)
         return {"FINISHED"}
 
 
@@ -141,22 +144,17 @@ class PMM_OT_EnsurePIP(bpy.types.Operator):
     bl_description = "Try to ensure PIP exists"
 
     def execute(self, context):
-        print("[Ensure PIP] Using", python_bin)
-        command = [python_bin, "-m", "ensurepip", "--default-pip"]
-        if bpy.context.scene.pip_user_flag:
-            command.append("--user")
-        print("Command:", " ".join(command))
+        run_pip_command(self, "--default-pip", run_module="ensurepip")
+        return {"FINISHED"}
 
-        # on Linux:
-        # -m ensurepip --user
 
-        out = subprocess.run(
-            command, check=True, shell=True, universal_newlines=True, stdout=subprocess.PIPE
-        )
-        global TEXT_OUTPUT
-        TEXT_OUTPUT = [i for i in out.stdout.split("\n")]
-        TEXT_OUTPUT.append(["finished."])
+class PMM_OT_UpgradePIP(bpy.types.Operator):
+    bl_idname = "pmm.upgrade_pip"
+    bl_label = "Upgrade PIP"
+    bl_description = "Upgrade PIP"
 
+    def execute(self, context):
+        run_pip_command(self, "install", "--upgrade", "pip")
         return {"FINISHED"}
 
 
@@ -168,6 +166,7 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
         row = layout.row()
         row.prop(bpy.context.scene, "pip_user_flag", text="As local user")
         row.operator(PMM_OT_EnsurePIP.bl_idname, text="Ensure PIP")
+        row.operator(PMM_OT_UpgradePIP.bl_idname, text="Upgrade PIP")
         row.operator(PMM_OT_PIPList.bl_idname, text="List")
 
         row = layout.row()
@@ -184,12 +183,27 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
                     col = row.column()
                     col.label(text=s)
             row = layout.row()
+
+        if ERROR_OUTPUT != []:
+            # row = layout.row(align=True)
+            # row.label(text="Error messages:")
+            row = layout.row(align=True)
+            box = row.box()
+            for i in ERROR_OUTPUT:
+                row = box.row()
+                for s in i:
+                    col = row.column()
+                    col.label(text=s)
+            row = layout.row()
+
+        if TEXT_OUTPUT != [] or ERROR_OUTPUT != []:
             row.operator(PMM_OT_ClearText.bl_idname, text="Clear output text")
 
 
 classes = (
     PMM_AddonPreferences,
     PMM_OT_EnsurePIP,
+    PMM_OT_UpgradePIP,
     PMM_OT_PIPList,
     PMM_OT_PIPInstall,
     PMM_OT_PIPRemove,
