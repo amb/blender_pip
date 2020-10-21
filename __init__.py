@@ -38,10 +38,7 @@ ERROR_OUTPUT = []
 
 
 def run_pip_command(self, *cmds, cols=False, run_module="pip"):
-    """
-    Run PIP process with user spec commands, return stdout or stderr
-    (stdout, None) or (None, stderr)
-    """
+    """ Run PIP process with user spec commands """
     global ERROR_OUTPUT
     global TEXT_OUTPUT
 
@@ -50,15 +47,12 @@ def run_pip_command(self, *cmds, cols=False, run_module="pip"):
 
     print(command)
     output = subprocess.run(
-        command,
-        universal_newlines=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 
     if output.stderr:
         if "WARNING" not in output.stderr[:20]:
-            # Skip the parts where PIP complains it's not the latest and greatest
+            # Don't display error popup when PIP complains it's not the latest and greatest
             self.report({"ERROR"}, "Error happened. Check console")
         print(">>> ERROR")
         print(output.returncode)
