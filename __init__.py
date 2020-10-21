@@ -171,6 +171,7 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
         if TEXT_OUTPUT != []:
             row = layout.row(align=True)
             box = row.box()
+            box = box.column(align=True)
             for i in TEXT_OUTPUT:
                 row = box.row()
                 for s in i:
@@ -183,6 +184,7 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
             # row.label(text="Error messages:")
             row = layout.row(align=True)
             box = row.box()
+            box = box.column(align=True)
             for i in ERROR_OUTPUT:
                 row = box.row()
                 for s in i:
