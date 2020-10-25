@@ -23,8 +23,10 @@ import site
 import sys
 import subprocess
 
+print("Blender PIP user site:", site.getusersitepackages())
 app_path = site.USER_SITE
 if app_path not in sys.path:
+    print("Adding site to path")
     sys.path.append(app_path)
 
 import bpy
@@ -212,6 +214,7 @@ def register():
         bpy.utils.register_class(c)
 
     bpy.types.Scene.pip_user_flag = bpy.props.BoolProperty(default=True)
+    bpy.types.Scene.pip_advanced_toggle = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.pip_module_name = bpy.props.StringProperty()
 
 
@@ -220,4 +223,5 @@ def unregister():
         bpy.utils.unregister_class(c)
 
     del bpy.types.Scene.pip_user_flag
+    del bpy.types.Scene.pip_advanced_toggle
     del bpy.types.Scene.pip_module_name
