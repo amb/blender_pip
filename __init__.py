@@ -33,7 +33,10 @@ import bpy
 import numpy as np
 import mathutils as mu
 
-python_bin = bpy.app.binary_path_python
+if bpy.app.version < (2,91,0):
+    python_bin = bpy.app.binary_path_python
+else:
+    python_bin = sys.executable
 
 TEXT_OUTPUT = []
 ERROR_OUTPUT = []
