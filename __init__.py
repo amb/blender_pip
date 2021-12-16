@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Python Module Manager",
     "author": "ambi",
-    "version": (1, 0, 5),
+    "version": (1, 0, 6),
     "blender": (2, 80, 0),
     "location": "Here",
     "description": "Manage Python modules inside Blender with PIP",
@@ -23,8 +23,8 @@ import site
 import sys
 import subprocess
 
-print("Blender PIP user site:", site.getusersitepackages())
-app_path = site.USER_SITE
+app_path = site.getusersitepackages()
+print("Blender PIP user site:", app_path)
 if app_path not in sys.path:
     print("Adding site to path")
     sys.path.append(app_path)
@@ -32,8 +32,11 @@ if app_path not in sys.path:
 import bpy
 import numpy as np
 import mathutils as mu
+from pathlib import Path
 
-if bpy.app.version < (2,91,0):
+MODULES_FOLDER = Path(bpy.utils.user_resource("SCRIPTS")) / "modules"
+
+if bpy.app.version < (2, 91, 0):
     python_bin = bpy.app.binary_path_python
 else:
     python_bin = sys.executable
@@ -43,11 +46,19 @@ ERROR_OUTPUT = []
 
 
 def run_pip_command(self, *cmds, cols=False, run_module="pip"):
-    """ Run PIP process with user spec commands """
+    """Run PIP process with user spec commands"""
     global ERROR_OUTPUT
     global TEXT_OUTPUT
 
     cmds = [c for c in cmds if c is not None]
+
+    # TODO: make this function only run pip commands, make separate function to run other modules
+    # Choose where to save Python modules
+    # if bpy.context.scene.pip_modules_home and MODULES_FOLDER.exists() and run_module == "pip":
+    #     cmds = ["--root", MODULES_FOLDER] + cmds
+    #     command = [python_bin, "-m", run_module, *cmds]
+    # else:
+    #     command = [python_bin, "-m", run_module, *cmds]
     command = [python_bin, "-m", run_module, *cmds]
 
     print(command)
@@ -73,7 +84,7 @@ def run_pip_command(self, *cmds, cols=False, run_module="pip"):
 
 
 def save_text(text, cols=False):
-    """ Parse input text string into a 2D list """
+    """Parse input text string into a 2D list"""
     out = []
     for i in text.split("\n"):
         if len(i) <= 1:
@@ -95,11 +106,12 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
     bl_description = "Install PIP packages"
 
     def execute(self, context):
+        chosen_path = "--user" if bpy.context.scene.pip_user_flag else None
         run_pip_command(
             self,
             "install",
             *bpy.context.scene.pip_module_name.split(" "),
-            "--user" if bpy.context.scene.pip_user_flag else None,
+            chosen_path,
         )
         return {"FINISHED"}
 
@@ -164,6 +176,10 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
         layout = self.layout
         row = layout.row()
         row.prop(bpy.context.scene, "pip_user_flag", text="As local user")
+        # TODO: implement storing Python modules into Blender module home
+        # row.prop(bpy.context.scene, "pip_modules_home", text="Use Blender modules location")
+
+        row = layout.row()
         row.operator(PMM_OT_EnsurePIP.bl_idname, text="Ensure PIP")
         row.operator(PMM_OT_UpgradePIP.bl_idname, text="Upgrade PIP")
         row.operator(PMM_OT_PIPList.bl_idname, text="List")
@@ -216,6 +232,7 @@ def register():
     for c in classes:
         bpy.utils.register_class(c)
 
+    bpy.types.Scene.pip_modules_home = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.pip_user_flag = bpy.props.BoolProperty(default=True)
     bpy.types.Scene.pip_advanced_toggle = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.pip_module_name = bpy.props.StringProperty()
@@ -225,6 +242,7 @@ def unregister():
     for c in reversed(classes):
         bpy.utils.unregister_class(c)
 
+    del bpy.types.Scene.pip_modules_home
     del bpy.types.Scene.pip_user_flag
     del bpy.types.Scene.pip_advanced_toggle
     del bpy.types.Scene.pip_module_name
