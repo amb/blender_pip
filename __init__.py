@@ -15,25 +15,13 @@ bl_info = {
 
 __version__ = ".".join(map(str, bl_info["version"]))
 
-# add user site to sys.path
-# binaries go to {site.USER_BASE}/bin
 # venv notice:
-#   https://stackoverflow.com/questions/33412974/
-#   how-to-uninstall-a-package-installed-with-pip-install-user/56948334#56948334
-# import site
+# https://stackoverflow.com/questions/33412974/how-to-uninstall-a-package-installed-with-pip-install-user
 import sys
 import subprocess
-
-# app_path = site.getusersitepackages()
-# print("Blender PIP user site:", app_path)
-# if app_path not in sys.path:
-#     print("Adding site to path")
-#     sys.path.append(app_path)
-
 import bpy
 from pathlib import Path
 
-# MODULES_FOLDER = Path(bpy.utils.user_resource("SCRIPTS")) / "modules"
 
 if bpy.app.version < (2, 91, 0):
     python_bin = bpy.app.binary_path_python
@@ -106,12 +94,10 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
 
     def execute(self, context):
         target_path = Path(python_bin).parent.parent / "lib" / "site-packages"
-        # chosen_path = "--user" if bpy.context.scene.pip_user_flag else None
         run_pip_command(
             self,
             "install",
             *bpy.context.scene.pip_module_name.split(" "),
-            # chosen_path,
             "--target",
             str(target_path),
         )
@@ -177,9 +163,6 @@ class PMM_AddonPreferences(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout
         row = layout.row()
-        # row.prop(bpy.context.scene, "pip_user_flag", text="As local user")
-        # TODO: implement storing Python modules into Blender module home
-        # row.prop(bpy.context.scene, "pip_modules_home", text="Use Blender modules location")
 
         row = layout.row()
         row.operator(PMM_OT_EnsurePIP.bl_idname, text="Ensure PIP")
@@ -235,7 +218,6 @@ def register():
         bpy.utils.register_class(c)
 
     bpy.types.Scene.pip_modules_home = bpy.props.BoolProperty(default=False)
-    # bpy.types.Scene.pip_user_flag = bpy.props.BoolProperty(default=True)
     bpy.types.Scene.pip_advanced_toggle = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.pip_module_name = bpy.props.StringProperty()
 
@@ -245,6 +227,5 @@ def unregister():
         bpy.utils.unregister_class(c)
 
     del bpy.types.Scene.pip_modules_home
-    # del bpy.types.Scene.pip_user_flag
     del bpy.types.Scene.pip_advanced_toggle
     del bpy.types.Scene.pip_module_name
