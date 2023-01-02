@@ -20,7 +20,6 @@ __version__ = ".".join(map(str, bl_info["version"]))
 import sys
 import subprocess
 import bpy
-from pathlib import Path
 
 
 if bpy.app.version < (2, 91, 0):
@@ -93,13 +92,12 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
     bl_description = "Install PIP packages"
 
     def execute(self, context):
-        target_path = Path(python_bin).parent.parent / "lib" / "site-packages"
         run_pip_command(
             self,
             "install",
             *bpy.context.scene.pip_module_name.split(" "),
             "--target",
-            str(target_path),
+            str(bpy.utils.script_path_user()),
         )
         return {"FINISHED"}
 
