@@ -20,6 +20,7 @@ __version__ = ".".join(map(str, bl_info["version"]))
 import sys
 import subprocess
 import bpy
+from pathlib import Path
 
 
 if bpy.app.version < (2, 91, 0):
@@ -97,7 +98,7 @@ class PMM_OT_PIPInstall(bpy.types.Operator):
             "install",
             *bpy.context.scene.pip_module_name.split(" "),
             "--target",
-            str(bpy.utils.script_path_user()),
+            Path(bpy.utils.script_path_user()) / "addons/modules",
         )
         return {"FINISHED"}
 
