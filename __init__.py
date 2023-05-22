@@ -14,24 +14,9 @@ bl_info = {
 
 __version__ = ".".join(map(str, bl_info["version"]))
 
-# add user site to sys.path
-# binaries go to {site.USER_BASE}/bin
-# venv notice:
-#   https://stackoverflow.com/questions/33412974/
-#   how-to-uninstall-a-package-installed-with-pip-install-user/56948334#56948334
-import site
 import sys
 import subprocess
-
-app_path = site.getusersitepackages()
-print("Blender PIP user site:", app_path)
-if app_path not in sys.path:
-    print("Adding site to path")
-    sys.path.append(app_path)
-
 import bpy
-import numpy as np
-import mathutils as mu
 from pathlib import Path
 
 MODULES_FOLDER = Path(bpy.utils.user_resource("SCRIPTS")) / "modules"
