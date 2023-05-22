@@ -37,13 +37,13 @@ def run_pip_command(self, *cmds, cols=False, run_module="pip"):
     global TEXT_OUTPUT
 
     cmds = [c for c in cmds if c is not None]
-
-    # combine all entries in os.path with path separator
-    joined_paths = os.pathsep.join(sys.path)
-    env_var = os.environ.get("PYTHONPATH")
-    if env_var:
-        os.environ["PYTHONPATH"] = f"{env_var}{os.pathsep}{joined_paths}"
-    else:
+    
+    # copy the sys.paths to PYTHONPATH to pass to subprocess, for pip to use
+    paths = os.environ.get("PYTHONPATH", "").split(os.pathsep)
+    new_paths = [p for p in sys.path if p not in paths]
+    paths += new_paths
+    joined_paths = os.pathsep.join(paths)
+    if joined_paths:
         os.environ["PYTHONPATH"] = joined_paths
 
     # TODO: make this function only run pip commands, make separate function to run other modules
