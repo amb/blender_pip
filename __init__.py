@@ -18,6 +18,7 @@ import sys
 import subprocess
 import bpy
 from pathlib import Path
+import os
 
 MODULES_FOLDER = Path(bpy.utils.user_resource("SCRIPTS")) / "modules"
 
@@ -36,6 +37,14 @@ def run_pip_command(self, *cmds, cols=False, run_module="pip"):
     global TEXT_OUTPUT
 
     cmds = [c for c in cmds if c is not None]
+
+    # combine all entries in os.path with path separator
+    joined_paths = os.pathsep.join(sys.path)
+    env_var = os.environ.get("PYTHONPATH")
+    if env_var:
+        os.environ["PYTHONPATH"] = f"{env_var}{os.pathsep}{joined_paths}"
+    else:
+        os.environ["PYTHONPATH"] = joined_paths
 
     # TODO: make this function only run pip commands, make separate function to run other modules
     # Choose where to save Python modules
